@@ -39,6 +39,11 @@ function Resortes_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.De,'Min',0.01,'Max',1.5,'SliderStep',[0.01/(1.50-0.01) 0.01],'Value',0.01)
     set(handles.Dm,'Min',0.5,'Max',15,'SliderStep',[0.5/(15-0.5) 0.01],'Value',0.5)
     set(handles.text4,'String','0.001');
+    
+    set(handles.ecuacion,'Visible','Off');
+    set(handles.grafica,'Visible','Off');
+    set(handles.uitable3,'Visible','Off');
+    set(handles.ecuacion,'String','Ecuacion');
 
 % --- Outputs from this function are returned to the command line.
 function varargout = Resortes_OutputFcn(hObject, eventdata, handles) 
@@ -568,70 +573,132 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 
 
 %% Calculo de valores.
-TipoResorte = get(handles.TipoExtremo,'Value');
-statusVarilla = get(handles.SobreVarilla,'Value');
-holgura =  str2num(get(handles.Holgura,'String'));
-Dvarilla = str2num(get(handles.DiamVarilla,'String'));
-d = str2num(get(handles.text4,'String'));
-F =  str2num(get(handles.text7,'String'));
-y =  str2num(get(handles.text10,'String'));
-Zeta =  str2num(get(handles.text13,'String'));
-if statusVarilla == 1
-    D = Dvarilla + d + holgura;
+tipo = get(handles.compresion,'Value')
+
+if tipo == 1
+    TipoResorte = get(handles.TipoExtremo,'Value');
+    statusVarilla = get(handles.SobreVarilla,'Value');
+    holgura =  str2num(get(handles.Holgura,'String'));
+    Dvarilla = str2num(get(handles.DiamVarilla,'String'));
+    d = str2num(get(handles.text4,'String'));
+    F =  str2num(get(handles.text7,'String'));
+    y =  str2num(get(handles.text10,'String'));
+    Zeta =  str2num(get(handles.text13,'String'));
+    if statusVarilla == 1
+        D = Dvarilla + d + holgura;
+    else
+        D = Dvarilla - d - holgura;
+    end
+    tableData = get(handles.uitable1, 'data');
+    m = str2double(tableData(1,1))
+    A = str2double(tableData(2,1))
+    E = str2double(tableData(3,1));
+    G = str2double(tableData(4,1));
+    Ks = str2double(tableData(5,1));
+    alfa = str2double(get(handles.text20,'String'));
+    [C,Kb,Sut,Ssy,K,Ts,ns,Na,Ne,Nt,Ls,Lo,p] = Calcular(TipoResorte,D,d,Zeta,F,y,A,m,G)
+    Di = D - d;
+    De = D + d;
+    Lc = 2.63*D/alfa;
+    set(handles.text19,'String',num2str(Na));
+     dat = {num2str(C);...
+            num2str(Nt);
+            num2str(Kb);...
+            num2str(Sut);...
+            num2str(Ssy);...
+            num2str(K);...
+            num2str(Ts);...
+            num2str(Ls);...
+            num2str(Lo);...
+            num2str(Lc);...
+            num2str(p);...
+            num2str(ns);...
+            num2str(Di);...
+            num2str(De)};
+    set(handles.uitable2,'Data',dat)
+    
+
+    global flagUnidades;
+
+    t = 0:3*pi/100:round(Nt)*2*pi;
+    x = 0.5*cos(t);
+    y = 0.5*sin(t);
+    grosor = (get(handles.d,'Value'));
+    if flagUnidades == true
+        grosor = grosor/20;
+    else
+        grosor = grosor;
+    end
+    axes(handles.GraphResorte)
+    axis off
+    plot3(x,y,t,'LineWidth',grosor*25);
+    set(handles.GraphResorte,'CameraPosition',[-5.3098 -16.7235 70.6070+round(Nt)*(24)]);
+    set(handles.GraphResorte,'CameraTarget',[0 0 (round(Nt)*2.5)+5]);
 else
-    D = Dvarilla - d - holgura;
+    d = str2num(get(handles.text4,'String'));
+    F =  str2num(get(handles.text7,'String'));
+    y =  str2num(get(handles.text10,'String'));
+    ny =  str2num(get(handles.text13,'String'));
+
+    tableData = get(handles.uitable1, 'data');
+    m = str2double(tableData(1,1))
+    A = str2double(tableData(2,1))
+    E = str2double(tableData(3,1));
+    G = str2double(tableData(4,1));
+    Ks = str2double(tableData(5,1));
+    [C,Nb,Lo,Sut,Ssy,Sy,Fi,Ti,Tgancho,Tcuerpo,Nygancho,Nycuerpo,Kbgancho,Kbcuerpo,K,Na] = CalcularExtension(d,ny,F,y,A,m,G,E)
+
+    set(handles.text19,'String',num2str(Na));
+     dat = {num2str(C);...
+            num2str(Nb);
+            num2str(Lo);...
+            num2str(Sut);...
+            num2str(Ssy);...
+            num2str(Sy);...
+            num2str(Fi);...
+            num2str(Ti);...
+            num2str(Tgancho);...
+            num2str(Tcuerpo);...
+            num2str(Nygancho);...
+            num2str(Nycuerpo);...
+            num2str(Kbgancho);...
+            num2str(Kbcuerpo);...
+            num2str(K)};
+    set(handles.uitable3,'Data',dat)
+    
+    cadena = strcat('F=',num2str(Fi),'+',num2str(K),'y');
+    set(handles.ecuacion,'String',cadena);
+    x = 0:0.01:y;
+    F = Fi+K*x;
+    axes(handles.grafica);
+    plot(x,F);
+    axis auto 
+    Nt = Na;
+    %%
+    global flagUnidades;
+    %nt = str2double((get(handles.text16,'String')));
+
+    t = 0:3*pi/100:round(Nt)*2*pi;
+    x = 0.5*cos(t);
+    y = 0.5*sin(t);
+
+    % calcula x, y, z 
+
+
+    % grafica 
+    grosor = (get(handles.d,'Value'));
+    if flagUnidades == true
+        grosor = grosor/20;
+    else
+        grosor = grosor;
+    end
+    axes(handles.GraphResorte)
+    axis off
+    plot3(x,y,t,'LineWidth',grosor*25);
+    set(handles.GraphResorte,'CameraPosition',[-5.3098 -16.7235 70.6070+round(Nt)*(24)]);
+    set(handles.GraphResorte,'CameraTarget',[0 0 (round(Nt)*2.5)+5]);
 end
-tableData = get(handles.uitable1, 'data');
-m = str2double(tableData(1,1))
-A = str2double(tableData(2,1))
-E = str2double(tableData(3,1));
-G = str2double(tableData(4,1));
-Ks = str2double(tableData(5,1));
-alfa = str2double(get(handles.text20,'String'));
-[C,Kb,Sut,Ssy,K,Ts,ns,Na,Ne,Nt,Ls,Lo,p] = Calcular(TipoResorte,D,d,Zeta,F,y,A,m,G)
-Di = D - d;
-De = D + d;
-Lc = 2.63*D/alfa;
-set(handles.text19,'String',num2str(Na));
- dat = {num2str(C);...
-        num2str(Nt);
-        num2str(Kb);...
-        num2str(Sut);...
-        num2str(Ssy);...
-        num2str(K);...
-        num2str(Ts);...
-        num2str(Ls);...
-        num2str(Lo);...
-        num2str(Lc);...
-        num2str(p);...
-        num2str(ns);...
-        num2str(Di);...
-        num2str(De)};
-set(handles.uitable2,'Data',dat)
-         
-%%
-global flagUnidades;
-%nt = str2double((get(handles.text16,'String')));
 
-t = 0:3*pi/100:round(Nt)*2*pi;
-x = 0.5*cos(t);
-y = 0.5*sin(t);
-
-% calcula x, y, z 
-
-
-% grafica 
-grosor = (get(handles.d,'Value'));
-if flagUnidades == true
-    grosor = grosor/20;
-else
-    grosor = grosor;
-end
-axes(handles.GraphResorte)
-axis off
-plot3(x,y,t,'LineWidth',grosor*25);
-set(handles.GraphResorte,'CameraPosition',[-5.3098 -16.7235 70.6070+round(Nt)*(24)]);
-set(handles.GraphResorte,'CameraTarget',[0 0 (round(Nt)*2.5)+5]);
 
 % --- Executes on button press in Ayuda.
 function Ayuda_Callback(hObject, eventdata, handles)
@@ -763,4 +830,75 @@ if get(hObject,'Value') == 0
     set(handles.text23,'String','Diametro Agujero');
 else
     set(handles.text23,'String','Diametro Varilla');
+end
+
+
+% --- Executes on button press in compresion.
+function compresion_Callback(hObject, eventdata, handles)
+% hObject    handle to compresion (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of compresion
+value = get(hObject,'Value')
+
+if value == 1
+    set(handles.TipoExtremo,'Visible','On');
+    set(handles.CondicionExtremo,'Visible','On');
+    set(handles.H,'Visible','On');
+    set(handles.Holgura,'Visible','On');
+    set(handles.text12,'Visible','On');
+    set(handles.uibuttongroup3,'Visible','On');
+    set(handles.text24,'Visible','On');
+    set(handles.DiamVarilla,'Visible','On');
+    set(handles.text23,'Visible','On');
+    set(handles.uitable2,'Visible','On');
+    set(handles.text21,'Visible','On');
+    set(handles.text20,'Visible','On');
+     set(handles.text14,'Visible','On');
+    set(handles.text16,'Visible','On');
+    set(handles.TipoExtremo,'Visible','On');
+    set(handles.De,'Min',0.01,'Max',1.5,'SliderStep',[0.01/(1.50-0.01) 0.01],'Value',0.01)
+    set(handles.text11,'String','Zeta');
+ 
+    
+    set(handles.ecuacion,'Visible','Off');
+    set(handles.grafica,'Visible','Off');
+    set(handles.uitable3,'Visible','Off');
+else
+    
+end
+
+% --- Executes on button press in extension.
+function extension_Callback(hObject, eventdata, handles)
+% hObject    handle to extension (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of extension
+value = get(hObject,'Value')
+
+if value == 1
+    set(handles.TipoExtremo,'Visible','Off');
+    set(handles.CondicionExtremo,'Visible','Off');
+    set(handles.H,'Visible','Off');
+    set(handles.Holgura,'Visible','Off');
+    set(handles.text12,'Visible','Off');
+    set(handles.uibuttongroup3,'Visible','Off');
+    set(handles.text24,'Visible','Off');
+    set(handles.DiamVarilla,'Visible','Off');
+    set(handles.text23,'Visible','Off');
+    set(handles.uitable2,'Visible','Off');
+    set(handles.text21,'Visible','Off');
+    set(handles.text20,'Visible','Off');
+    set(handles.text14,'Visible','Off');
+    set(handles.text16,'Visible','Off');
+    set(handles.TipoExtremo,'Visible','Off');
+    set(handles.De,'Min',0.1,'Max',5.0,'SliderStep',[0.1/(5.0-0.1) 0.01],'Value',0.1)
+    set(handles.text11,'String','ny');
+    set(handles.ecuacion,'Visible','On');
+    set(handles.grafica,'Visible','On');
+    set(handles.uitable3,'Visible','On');
+else
+    
 end
